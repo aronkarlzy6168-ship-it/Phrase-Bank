@@ -1,0 +1,902 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Phrase Bank</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1B2430">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" href="icon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1B2430;
+    --ink-soft:#3C4655;
+    --paper:#EFEBE3;
+    --paper-raised:#F8F6F1;
+    --line:#DAD4C6;
+    --sage:#5F7A63;
+    --sage-soft:#DCE5DD;
+    --amber:#B8863A;
+    --amber-soft:#EFE1C4;
+    --clay:#A85C4A;
+    --clay-soft:#EFD9D2;
+    --radius:10px;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Inter',sans-serif;
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--sage-soft);}
+
+  .wrap{max-width:920px;margin:0 auto;padding:48px 24px 96px;}
+
+  header.top{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-end;
+    margin-bottom:36px;
+    border-bottom:1px solid var(--line);
+    padding-bottom:20px;
+  }
+  header.top h1{
+    font-family:'Fraunces',serif;
+    font-weight:500;
+    font-size:2rem;
+    margin:0 0 4px;
+    letter-spacing:-0.01em;
+  }
+  header.top p{
+    margin:0;
+    color:var(--ink-soft);
+    font-size:0.92rem;
+  }
+  .count-pill{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:0.78rem;
+    color:var(--ink-soft);
+    background:var(--paper-raised);
+    border:1px solid var(--line);
+    border-radius:20px;
+    padding:5px 12px;
+    white-space:nowrap;
+  }
+
+  /* ---- Recent rail (signature element) ---- */
+  .rail-section{margin-bottom:44px;}
+  .rail-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:14px;
+  }
+  .rail-head h2{
+    font-family:'Fraunces',serif;
+    font-size:1.15rem;
+    font-weight:500;
+    margin:0;
+  }
+  .rail-head .sub{
+    font-size:0.82rem;
+    color:var(--ink-soft);
+    margin-top:2px;
+  }
+  button.challenge-btn{
+    font-family:'Inter',sans-serif;
+    font-size:0.82rem;
+    font-weight:600;
+    color:var(--paper-raised);
+    background:var(--ink);
+    border:none;
+    border-radius:8px;
+    padding:9px 16px;
+    cursor:pointer;
+    transition:transform .15s ease, background .15s ease;
+  }
+  button.challenge-btn:hover{background:var(--sage);}
+  button.challenge-btn:active{transform:scale(.97);}
+
+  .rail-track{
+    display:flex;
+    gap:14px;
+    overflow-x:auto;
+    padding-bottom:8px;
+    scroll-snap-type:x proximity;
+  }
+  .rail-card{
+    scroll-snap-align:start;
+    flex:0 0 240px;
+    background:var(--paper-raised);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:16px 18px;
+    position:relative;
+  }
+  .rail-card .phrase{
+    font-family:'Fraunces',serif;
+    font-size:1.05rem;
+    font-weight:500;
+    margin:0 0 6px;
+  }
+  .rail-card .ctx{
+    font-size:0.82rem;
+    color:var(--ink-soft);
+    font-style:italic;
+    margin:0 0 10px;
+    display:-webkit-box;
+    -webkit-line-clamp:2;
+    -webkit-box-orient:vertical;
+    overflow:hidden;
+  }
+  .rail-card .date{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:0.7rem;
+    color:var(--ink-soft);
+    opacity:0.7;
+  }
+  .empty-rail{
+    font-size:0.85rem;
+    color:var(--ink-soft);
+    padding:16px 0;
+  }
+
+  .challenge-banner{
+    display:none;
+    margin-top:12px;
+    background:var(--sage-soft);
+    border:1px solid var(--sage);
+    border-radius:var(--radius);
+    padding:14px 18px;
+    font-size:0.9rem;
+  }
+  .challenge-banner.show{display:block;}
+  .challenge-banner strong{font-family:'Fraunces',serif;font-weight:600;}
+
+  /* ---- Toolbar ---- */
+  .toolbar{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    flex-wrap:wrap;
+    gap:12px;
+    margin-bottom:20px;
+  }
+  .filters{display:flex;gap:8px;}
+  .filter-btn{
+    font-family:'Inter',sans-serif;
+    font-size:0.82rem;
+    font-weight:500;
+    padding:7px 14px;
+    border-radius:20px;
+    border:1px solid var(--line);
+    background:var(--paper-raised);
+    color:var(--ink-soft);
+    cursor:pointer;
+  }
+  .filter-btn.active{
+    background:var(--ink);
+    color:var(--paper-raised);
+    border-color:var(--ink);
+  }
+  .actions{display:flex;gap:8px;}
+  .icon-btn{
+    font-family:'Inter',sans-serif;
+    font-size:0.82rem;
+    font-weight:600;
+    padding:9px 16px;
+    border-radius:8px;
+    border:1px solid var(--line);
+    background:var(--paper-raised);
+    color:var(--ink);
+    cursor:pointer;
+  }
+  .icon-btn:hover{border-color:var(--ink);}
+  .icon-btn.primary{
+    background:var(--sage);
+    border-color:var(--sage);
+    color:#fff;
+  }
+  .icon-btn.primary:hover{background:#516b55;}
+  input[type=file]{display:none;}
+
+  /* ---- Paste & auto-fill ---- */
+  .paste-box{
+    background:var(--paper-raised);
+    border:1px dashed var(--sage);
+    border-radius:var(--radius);
+    padding:20px;
+    margin-bottom:28px;
+    display:none;
+  }
+  .paste-box.show{display:block;}
+  .paste-box textarea{
+    width:100%;
+    min-height:160px;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:0.82rem;
+    padding:12px;
+    border:1px solid var(--line);
+    border-radius:7px;
+    margin-top:8px;
+    resize:vertical;
+  }
+
+  /* ---- Add form ---- */
+  .add-form{
+    background:var(--paper-raised);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:20px;
+    margin-bottom:28px;
+    display:none;
+  }
+  .add-form.show{display:block;}
+  .add-form h3{
+    font-family:'Fraunces',serif;
+    font-weight:500;
+    margin:0 0 14px;
+    font-size:1.05rem;
+  }
+  .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  .form-grid .full{grid-column:1/-1;}
+  label{
+    display:block;
+    font-size:0.75rem;
+    font-weight:600;
+    text-transform:uppercase;
+    letter-spacing:0.04em;
+    color:var(--ink-soft);
+    margin-bottom:5px;
+  }
+  input[type=text],textarea,select{
+    width:100%;
+    font-family:'Inter',sans-serif;
+    font-size:0.9rem;
+    padding:9px 11px;
+    border:1px solid var(--line);
+    border-radius:7px;
+    background:#fff;
+    color:var(--ink);
+  }
+  textarea{resize:vertical;min-height:52px;}
+  input:focus,textarea:focus,select:focus{outline:2px solid var(--sage);outline-offset:1px;}
+  .form-buttons{display:flex;gap:8px;margin-top:16px;justify-content:flex-end;}
+
+  /* ---- Entries ---- */
+  .entry{
+    background:var(--paper-raised);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:18px 20px;
+    margin-bottom:12px;
+  }
+  .entry-top{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:12px;
+  }
+  .entry-phrase{
+    font-family:'Fraunces',serif;
+    font-size:1.2rem;
+    font-weight:500;
+    margin:0 0 6px;
+  }
+  .entry-ctx{
+    font-size:0.88rem;
+    color:var(--ink-soft);
+    margin:0 0 8px;
+    border-left:2px solid var(--line);
+    padding-left:10px;
+  }
+  .entry-ctx strong{
+    display:block;
+    color:var(--ink);
+    font-weight:600;
+    font-style:normal;
+    margin-bottom:3px;
+  }
+  .entry-eg-item{
+    font-style:italic;
+    margin-bottom:2px;
+  }
+  .entry-meaning{
+    font-size:0.85rem;
+    color:var(--ink);
+    margin:0 0 10px;
+  }
+  .entry-usage, .entry-collocations{
+    font-size:0.82rem;
+    color:var(--ink-soft);
+    margin:0 0 6px;
+  }
+  .entry-usage strong, .entry-collocations strong{
+    color:var(--ink);
+    font-weight:600;
+  }
+  .entry-meta{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-top:10px;
+  }
+  .entry-date{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:0.72rem;
+    color:var(--ink-soft);
+  }
+
+  /* stage tracker (signature) */
+  .stage-track{display:flex;align-items:center;gap:0;}
+  .stage-step{
+    display:flex;align-items:center;cursor:pointer;
+  }
+  .stage-dot{
+    width:9px;height:9px;border-radius:50%;
+    background:var(--line);
+    border:1px solid var(--line);
+  }
+  .stage-line{width:18px;height:1px;background:var(--line);}
+  .stage-label{
+    font-size:0.7rem;
+    font-family:'IBM Plex Mono',monospace;
+    margin-left:6px;
+    margin-right:2px;
+    color:var(--ink-soft);
+  }
+  .stage-step.filled .stage-dot{background:var(--sage);border-color:var(--sage);}
+  .stage-step.current .stage-dot{background:var(--amber);border-color:var(--amber);}
+  .stage-step.current .stage-label{color:var(--amber);font-weight:600;}
+
+  .entry-controls{display:flex;gap:6px;}
+  .mini-btn{
+    background:none;border:none;color:var(--ink-soft);
+    font-size:0.75rem;cursor:pointer;padding:2px 6px;
+  }
+  .mini-btn:hover{color:var(--clay);}
+
+  .empty-state{
+    text-align:center;
+    padding:60px 20px;
+    color:var(--ink-soft);
+  }
+  .empty-state h3{
+    font-family:'Fraunces',serif;
+    font-weight:500;
+    color:var(--ink);
+    margin-bottom:6px;
+  }
+
+  @media (max-width:600px){
+    .form-grid{grid-template-columns:1fr;}
+    header.top{flex-direction:column;align-items:flex-start;gap:8px;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <div>
+      <h1>Phrase Bank</h1>
+      <p>Natural expressions collected in the wild — not memorized, acquired.</p>
+    </div>
+    <div class="count-pill" id="countPill">0 phrases</div>
+  </header>
+
+  <section class="rail-section">
+    <div class="rail-head">
+      <div>
+        <h2>Before you speak or write</h2>
+        <div class="sub">Your most recent catches — glance, then try to use one.</div>
+      </div>
+      <button class="challenge-btn" onclick="runChallenge()">Give me a challenge</button>
+    </div>
+    <div class="rail-track" id="railTrack"></div>
+    <div class="challenge-banner" id="challengeBanner"></div>
+  </section>
+
+  <div class="toolbar">
+    <div class="filters" id="filters">
+      <button class="filter-btn active" data-status="all">All</button>
+      <button class="filter-btn" data-status="New">New</button>
+      <button class="filter-btn" data-status="Learning">Learning</button>
+      <button class="filter-btn" data-status="Active">Active</button>
+    </div>
+    <div class="actions">
+      <button class="icon-btn" onclick="document.getElementById('importFile').click()">Import</button>
+      <input type="file" id="importFile" accept="application/json">
+      <button class="icon-btn" onclick="exportData()">Export</button>
+      <button class="icon-btn" onclick="openPasteBox()">Paste & auto-fill</button>
+      <button class="icon-btn primary" onclick="toggleForm()">+ Add phrase</button>
+    </div>
+  </div>
+
+  <div class="paste-box" id="pasteBox">
+    <label>Paste a formatted entry (word, then Meaning: / Most Common Usage: / Examples: / Collocations:)</label>
+    <textarea id="pasteInput" placeholder="pervasive
+Meaning:
+Present or spreading widely throughout something...
+Most Common Usage:
+Formal or academic writing...
+Examples:
+Stress is a pervasive problem in modern workplaces.
+Collocations:
+pervasive problem
+pervasive influence"></textarea>
+    <div class="form-buttons">
+      <button class="icon-btn" onclick="closePasteBox()">Cancel</button>
+      <button class="icon-btn primary" onclick="parsePaste()">Auto-fill form</button>
+    </div>
+  </div>
+
+  <div class="add-form" id="addForm">
+    <h3 id="formTitle">New entry</h3>
+    <div class="form-grid">
+      <div class="full">
+        <label>Phrase / collocation / expression</label>
+        <input type="text" id="fPhrase" placeholder="e.g. get the ball rolling">
+      </div>
+      <div class="full">
+        <label>Original sentence(s) — where you found it, or examples</label>
+        <textarea id="fContext" placeholder="e.g. &quot;Let's get the ball rolling on the onboarding flow before Friday.&quot;"></textarea>
+      </div>
+      <div class="full">
+        <label>Meaning (optional)</label>
+        <input type="text" id="fMeaning" placeholder="Only note it if you actually need the reminder">
+      </div>
+      <div class="full">
+        <label>Most common usage (optional)</label>
+        <input type="text" id="fUsage" placeholder="e.g. Formal or academic writing, describing widespread problems">
+      </div>
+      <div class="full">
+        <label>Collocations (optional)</label>
+        <input type="text" id="fCollocations" placeholder="e.g. pervasive problem, pervasive influence, deeply pervasive">
+      </div>
+      <div>
+        <label>Status</label>
+        <select id="fStatus">
+          <option value="New">New</option>
+          <option value="Learning">Learning</option>
+          <option value="Active">Active</option>
+        </select>
+      </div>
+      <div>
+        <label>Date added</label>
+        <input type="text" id="fDate" readonly>
+      </div>
+    </div>
+    <div class="form-buttons">
+      <button class="icon-btn" onclick="toggleForm()">Cancel</button>
+      <button class="icon-btn primary" id="saveBtn" onclick="saveEntry()">Save phrase</button>
+    </div>
+  </div>
+
+  <div id="entryList"></div>
+  <div class="empty-state" id="emptyState" style="display:none;">
+    <h3>No phrases yet</h3>
+    <p>Add the next natural expression you notice — a headline, a Slack message, a line from a video.</p>
+  </div>
+
+</div>
+
+<script>
+const STAGES = ['New','Learning','Active'];
+
+const STORAGE_KEY = 'phraseBankData';
+
+const seedData = [
+  {
+    id: cryptoId(),
+    phrase: "circle back",
+    context: "\"Let's circle back on this once the client confirms scope.\"",
+    meaning: "Return to a topic later",
+    status: "Active",
+    date: "2026-06-14"
+  },
+  {
+    id: cryptoId(),
+    phrase: "on the same page",
+    context: "\"Before we start, let's make sure we're on the same page about the timeline.\"",
+    meaning: "Sharing the same understanding",
+    status: "Learning",
+    date: "2026-06-29"
+  },
+  {
+    id: cryptoId(),
+    phrase: "a steep learning curve",
+    context: "\"n8n has a steep learning curve at first, but it clicks after a week.\"",
+    meaning: "",
+    status: "New",
+    date: "2026-07-05"
+  }
+];
+
+let data = loadData();
+
+function loadData(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(raw){
+      const parsed = JSON.parse(raw);
+      if(Array.isArray(parsed)) return parsed.map(sanitizeEntry);
+    }
+  }catch(err){
+    console.warn('localStorage unavailable or corrupted, falling back to in-memory seed data.');
+  }
+  return seedData;
+}
+
+// Guarantees every entry has the fields render()/sort() depend on,
+// so one malformed record (e.g. missing date) can't silently break the whole list.
+function sanitizeEntry(e){
+  return {
+    id: e && e.id ? e.id : cryptoId(),
+    phrase: e && e.phrase ? e.phrase : '(untitled phrase)',
+    context: e && e.context ? e.context : '',
+    meaning: e && e.meaning ? e.meaning : '',
+    usage: e && e.usage ? e.usage : '',
+    collocations: e && e.collocations ? e.collocations : '',
+    status: e && STAGES.includes(e.status) ? e.status : 'New',
+    date: e && e.date ? e.date : todayStr()
+  };
+}
+
+function persist(){
+  try{
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  }catch(err){
+    console.warn('Could not save to localStorage.');
+  }
+}
+
+function cryptoId(){return 'p'+Math.random().toString(36).slice(2,10);}
+
+function todayStr(){
+  const d = new Date();
+  return d.toISOString().slice(0,10);
+}
+
+function fmtDate(iso){
+  const d = new Date(iso+'T00:00:00');
+  return d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+}
+
+let activeFilter = 'all';
+let editingId = null;
+
+function render(){
+  renderRail();
+  renderList();
+  document.getElementById('countPill').textContent =
+    data.length + (data.length===1 ? ' phrase' : ' phrases');
+}
+
+function renderRail(){
+  const track = document.getElementById('railTrack');
+  const recent = [...data].sort((a,b)=>(b.date||'').localeCompare(a.date||'')).slice(0,6);
+  if(recent.length===0){
+    track.innerHTML = '<div class="empty-rail">Add a phrase to start your warm-up rail.</div>';
+    return;
+  }
+  track.innerHTML = recent.map(e=>`
+    <div class="rail-card">
+      <p class="phrase">${escapeHtml(e.phrase)}</p>
+      <p class="ctx">${escapeHtml(e.context)}</p>
+      <div class="date">${fmtDate(e.date)}</div>
+    </div>
+  `).join('');
+}
+
+function runChallenge(){
+  const recent = [...data].sort((a,b)=>(b.date||'').localeCompare(a.date||'')).slice(0,6);
+  if(recent.length===0) return;
+  const n = recent.length >= 2 && Math.random() > 0.5 ? 2 : 1;
+  const shuffled = [...recent].sort(()=>Math.random()-0.5).slice(0,n);
+  const banner = document.getElementById('challengeBanner');
+  banner.innerHTML = 'Try to use ' + shuffled.map(e=>`<strong>${escapeHtml(e.phrase)}</strong>`).join(' and ') +
+    ' naturally in your next sentence or two — out loud or on paper.';
+  banner.classList.add('show');
+}
+
+// Renders the context/examples field as a labeled, numbered "E.g:" list.
+// Supports both a single found-sentence (manual add) and multiple pasted examples.
+function examplesBlockHtml(context){
+  if(!context) return '';
+  const lines = context.split('\n').map(l=>l.trim()).filter(l=>l.length>0);
+  if(lines.length===0) return '';
+  const items = lines.map((line,i)=>`<div class="entry-eg-item">${i+1}. ${escapeHtml(line)}</div>`).join('');
+  return `<div class="entry-ctx"><strong>E.g:</strong>${items}</div>`;
+}
+
+function renderList(){
+  const list = document.getElementById('entryList');
+  const empty = document.getElementById('emptyState');
+  let filtered = activeFilter==='all' ? data : data.filter(e=>e.status===activeFilter);
+  filtered = [...filtered].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+
+  if(data.length===0){
+    list.innerHTML='';
+    empty.style.display='block';
+    return;
+  }
+  empty.style.display='none';
+
+  list.innerHTML = filtered.map(e=>`
+    <div class="entry">
+      <div class="entry-top">
+        <div>
+          <p class="entry-phrase">${escapeHtml(e.phrase)}</p>
+          ${e.meaning ? `<p class="entry-meaning"><strong>Meaning:</strong> ${escapeHtml(e.meaning)}</p>` : ''}
+          ${examplesBlockHtml(e.context)}
+          ${e.usage ? `<p class="entry-usage"><strong>Usage:</strong> ${escapeHtml(e.usage)}</p>` : ''}
+          ${e.collocations ? `<p class="entry-collocations"><strong>Collocations:</strong> ${escapeHtml(e.collocations)}</p>` : ''}
+        </div>
+        <div class="entry-controls">
+          <button class="mini-btn" onclick="editEntry('${e.id}')">Edit</button>
+          <button class="mini-btn" onclick="deleteEntry('${e.id}')">Delete</button>
+        </div>
+      </div>
+      <div class="entry-meta">
+        <div class="entry-date">${fmtDate(e.date)}</div>
+        ${stageTrackHtml(e)}
+      </div>
+    </div>
+  `).join('');
+}
+
+function stageTrackHtml(e){
+  const idx = STAGES.indexOf(e.status);
+  return '<div class="stage-track">' + STAGES.map((s,i)=>{
+    const cls = i < idx ? 'filled' : (i===idx ? 'current' : '');
+    return `
+      ${i>0 ? '<div class="stage-line"></div>' : ''}
+      <div class="stage-step ${cls}" onclick="setStage('${e.id}','${s}')">
+        <div class="stage-dot"></div>
+        <span class="stage-label">${s}</span>
+      </div>
+    `;
+  }).join('') + '</div>';
+}
+
+function setStage(id, status){
+  const e = data.find(x=>x.id===id);
+  if(e){ e.status = status; persist(); render(); }
+}
+
+function deleteEntry(id){
+  data = data.filter(e=>e.id!==id);
+  persist();
+  render();
+}
+
+function escapeHtml(str){
+  const div = document.createElement('div');
+  div.textContent = str || '';
+  return div.innerHTML;
+}
+
+function openPasteBox(){
+  document.getElementById('pasteBox').classList.add('show');
+  document.getElementById('pasteInput').value = '';
+  document.getElementById('pasteInput').focus();
+}
+
+function closePasteBox(){
+  document.getElementById('pasteBox').classList.remove('show');
+}
+
+// Parses the "word / Meaning: / Most Common Usage: / Examples: / Collocations:" format
+// into the add-form fields. Tolerant of a trailing colon or not, and of section order.
+function parsePaste(){
+  const raw = document.getElementById('pasteInput').value;
+  const lines = raw.split('\n').map(l=>l.trim()).filter(l=>l.length>0);
+  if(lines.length===0){
+    alert('Paste an entry first.');
+    return;
+  }
+
+  const HEADERS = {
+    'meaning': 'meaning',
+    'most common usage': 'usage',
+    'common usage': 'usage',
+    'usage': 'usage',
+    'examples': 'examples',
+    'example': 'examples',
+    'collocations': 'collocations',
+    'collocation': 'collocations'
+  };
+
+  const result = { phrase:'', meaning:'', usage:'', examples:[], collocations:[] };
+  let section = null;
+  let phraseSet = false;
+
+  for(const line of lines){
+    const headerKey = line.replace(/:$/,'').toLowerCase().trim();
+    if(HEADERS[headerKey]){
+      section = HEADERS[headerKey];
+      continue;
+    }
+    if(!phraseSet && section===null){
+      result.phrase = line;
+      phraseSet = true;
+      continue;
+    }
+    if(section==='meaning'){
+      result.meaning = result.meaning ? result.meaning + ' ' + line : line;
+    } else if(section==='usage'){
+      result.usage = result.usage ? result.usage + ' ' + line : line;
+    } else if(section==='examples'){
+      result.examples.push(line);
+    } else if(section==='collocations'){
+      result.collocations.push(line);
+    }
+  }
+
+  if(!result.phrase){
+    alert('Could not find the phrase — make sure it\'s the first line, before any "Meaning:" section.');
+    return;
+  }
+
+  document.getElementById('fPhrase').value = result.phrase;
+  document.getElementById('fMeaning').value = result.meaning;
+  document.getElementById('fUsage').value = result.usage;
+  document.getElementById('fContext').value = result.examples.join('\n');
+  document.getElementById('fCollocations').value = result.collocations.join(', ');
+
+  closePasteBox();
+  toggleForm(true);
+}
+
+function toggleForm(forceOpen){
+  const form = document.getElementById('addForm');
+  if(forceOpen === true){
+    form.classList.add('show');
+  } else if(forceOpen === false){
+    form.classList.remove('show');
+  } else {
+    form.classList.toggle('show');
+  }
+  if(form.classList.contains('show')){
+    if(!editingId) document.getElementById('fDate').value = todayStr();
+    document.getElementById('fPhrase').focus();
+  } else {
+    editingId = null;
+    clearForm();
+  }
+}
+
+function editEntry(id){
+  const e = data.find(x=>x.id===id);
+  if(!e) return;
+  editingId = id;
+  document.getElementById('fPhrase').value = e.phrase;
+  document.getElementById('fContext').value = e.context;
+  document.getElementById('fMeaning').value = e.meaning || '';
+  document.getElementById('fUsage').value = e.usage || '';
+  document.getElementById('fCollocations').value = e.collocations || '';
+  document.getElementById('fStatus').value = e.status;
+  document.getElementById('fDate').value = e.date;
+  document.getElementById('formTitle').textContent = 'Edit entry';
+  document.getElementById('saveBtn').textContent = 'Update phrase';
+  toggleForm(true);
+  const formEl = document.getElementById('addForm');
+  if(formEl.scrollIntoView) formEl.scrollIntoView({behavior:'smooth', block:'center'});
+}
+
+function clearForm(){
+  document.getElementById('fPhrase').value='';
+  document.getElementById('fContext').value='';
+  document.getElementById('fMeaning').value='';
+  document.getElementById('fUsage').value='';
+  document.getElementById('fCollocations').value='';
+  document.getElementById('fStatus').value='New';
+  document.getElementById('formTitle').textContent = 'New entry';
+  document.getElementById('saveBtn').textContent = 'Save phrase';
+}
+
+function saveEntry(){
+  try{
+    const phrase = document.getElementById('fPhrase').value.trim();
+    const context = document.getElementById('fContext').value.trim();
+    if(!phrase || !context){
+      alert('Add both the phrase and the original sentence — that context is the whole point of this tool.');
+      return;
+    }
+    const meaning = document.getElementById('fMeaning').value.trim();
+    const usage = document.getElementById('fUsage').value.trim();
+    const collocations = document.getElementById('fCollocations').value.trim();
+    const status = document.getElementById('fStatus').value;
+
+    if(editingId){
+      // Update existing entry in place — original date added is preserved.
+      const e = data.find(x=>x.id===editingId);
+      if(e){
+        e.phrase = phrase;
+        e.context = context;
+        e.meaning = meaning;
+        e.usage = usage;
+        e.collocations = collocations;
+        e.status = status;
+      }
+    } else {
+      data.push({
+        id: cryptoId(),
+        phrase,
+        context,
+        meaning,
+        usage,
+        collocations,
+        status,
+        date: todayStr()
+      });
+    }
+    persist();
+    editingId = null;
+    clearForm();
+    toggleForm();
+    render();
+  }catch(err){
+    console.error(err);
+    alert('Could not save the phrase — something went wrong. Your entry was not lost from the form.');
+  }
+}
+
+document.getElementById('filters').addEventListener('click', (ev)=>{
+  const btn = ev.target.closest('.filter-btn');
+  if(!btn) return;
+  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  activeFilter = btn.dataset.status;
+  renderList();
+});
+
+function exportData(){
+  const blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'phrase-bank-'+todayStr()+'.json';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+document.getElementById('importFile').addEventListener('change', (ev)=>{
+  const file = ev.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try{
+      const imported = JSON.parse(reader.result);
+      if(Array.isArray(imported)){
+        data = imported.map(sanitizeEntry);
+        persist();
+        render();
+      }
+    }catch(err){
+      alert('Could not read that file — make sure it\'s a JSON export from this Phrase Bank.');
+    }
+  };
+  reader.readAsText(file);
+  ev.target.value = '';
+});
+
+render();
+
+if('serviceWorker' in navigator){
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('service-worker.js').catch(()=>{});
+  });
+}
+</script>
+</body>
+</html>

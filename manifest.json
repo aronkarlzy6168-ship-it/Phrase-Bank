@@ -1,0 +1,12 @@
+{
+  "name": "Phrase Bank",
+  "short_name": "Phrase Bank",
+  "start_url": "./phrase-bank.html",
+  "display": "standalone",
+  "background_color": "#EFEBE3",
+  "theme_color": "#1B2430",
+  "orientation": "portrait",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
