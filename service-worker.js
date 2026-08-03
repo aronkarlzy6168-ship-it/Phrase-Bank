@@ -1,5 +1,5 @@
-const CACHE_NAME = 'phrase-bank-v1';
-const FILES_TO_CACHE = ['./phrase-bank.html', './manifest.json', './icon.svg'];
+const CACHE_NAME = 'phrase-bank-v2';
+const FILES_TO_CACHE = ['./phrase-bank.html', './manifest.json', './1785727113915.png'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
