@@ -3,8 +3,8 @@
   "short_name": "Phrase Bank",
   "start_url": "./phrase-bank.html",
   "display": "standalone",
-  "background_color": "#EFEBE3",
-  "theme_color": "#1B2430",
+  "background_color": "#0A0E14",
+  "theme_color": "#0A0E14",
   "orientation": "portrait",
   "icons": [
     { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
