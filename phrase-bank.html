@@ -223,12 +223,12 @@
     color:var(--ink);
     margin:0 0 10px;
   }
-  .entry-collocations{
+  .entry-collocations, .entry-commonly-used{
     font-size:0.82rem;
     color:var(--ink-soft);
     margin:0 0 6px;
   }
-  .entry-collocations strong{
+  .entry-collocations strong, .entry-commonly-used strong{
     color:var(--ink);
     font-weight:600;
   }
@@ -299,7 +299,7 @@
   </div>
 
   <div class="paste-box" id="pasteBox">
-    <label>Paste a formatted entry (word, then Meaning: / Collocations: / Example:)</label>
+    <label>Paste a formatted entry (word, then Meaning: / Collocations: / Commonly used with: / Example:)</label>
     <textarea id="pasteInput" placeholder="pervasive
 
 Meaning:
@@ -308,6 +308,10 @@ Present or spreading widely throughout something...
 Collocations:
 pervasive problem
 pervasive influence
+
+Commonly used with:
+increasingly
+deeply
 
 Example:
 Stress is a pervasive problem in modern workplaces."></textarea>
@@ -335,6 +339,14 @@ Stress is a pervasive problem in modern workplaces."></textarea>
       <div>
         <label>Collocation 2</label>
         <input type="text" id="fCollocation2" placeholder="e.g. get the ball rolling early">
+      </div>
+      <div>
+        <label>Commonly used with 1</label>
+        <input type="text" id="fCommonlyUsedWith1" placeholder="e.g. let's">
+      </div>
+      <div>
+        <label>Commonly used with 2</label>
+        <input type="text" id="fCommonlyUsedWith2" placeholder="e.g. we should">
       </div>
       <div class="full">
         <label>Example</label>
@@ -365,6 +377,8 @@ const seedData = [
     meaning: "Return to a topic later",
     collocation1: "circle back on this",
     collocation2: "circle back to you",
+    commonlyUsedWith1: "let's",
+    commonlyUsedWith2: "I'll",
     example: "\"Let's circle back on this once the client confirms scope.\"",
     date: "2026-07-20",
     day: "Monday"
@@ -375,6 +389,8 @@ const seedData = [
     meaning: "Sharing the same understanding",
     collocation1: "get on the same page",
     collocation2: "stay on the same page",
+    commonlyUsedWith1: "make sure",
+    commonlyUsedWith2: "everyone",
     example: "\"Before we start, let's make sure we're on the same page about the timeline.\"",
     date: "2026-07-22",
     day: "Wednesday"
@@ -385,6 +401,8 @@ const seedData = [
     meaning: "Something that takes real effort to learn at first",
     collocation1: "have a steep learning curve",
     collocation2: "steep learning curve at first",
+    commonlyUsedWith1: "at first",
+    commonlyUsedWith2: "but it clicks",
     example: "\"n8n has a steep learning curve at first, but it clicks after a week.\"",
     date: "2026-07-28",
     day: "Tuesday"
@@ -423,6 +441,8 @@ function sanitizeEntry(e){
     meaning: e.meaning || '',
     collocation1,
     collocation2,
+    commonlyUsedWith1: e.commonlyUsedWith1 || '',
+    commonlyUsedWith2: e.commonlyUsedWith2 || '',
     example,
     date,
     day: WEEKDAYS.includes(e.day) ? e.day : weekdayFromDate(date)
@@ -529,6 +549,12 @@ function collocationsBlockHtml(e){
   return `<p class="entry-collocations"><strong>Collocations:</strong> ${escapeHtml(parts.join(', '))}</p>`;
 }
 
+function commonlyUsedWithBlockHtml(e){
+  const parts = [e.commonlyUsedWith1, e.commonlyUsedWith2].filter(Boolean);
+  if(parts.length===0) return '';
+  return `<p class="entry-commonly-used"><strong>Commonly used with:</strong> ${escapeHtml(parts.join(', '))}</p>`;
+}
+
 function renderList(){
   const list = document.getElementById('entryList');
   const empty = document.getElementById('emptyState');
@@ -555,6 +581,7 @@ function renderList(){
           ${e.meaning ? `<p class="entry-meaning"><strong>Meaning:</strong> ${escapeHtml(e.meaning)}</p>` : ''}
           ${exampleBlockHtml(e.example)}
           ${collocationsBlockHtml(e)}
+          ${commonlyUsedWithBlockHtml(e)}
         </div>
         <div class="entry-controls">
           <button class="mini-btn" onclick="editEntry('${e.id}')">Edit</button>
@@ -605,11 +632,12 @@ function parsePaste(){
     'meaning': 'meaning',
     'collocations': 'collocations',
     'collocation': 'collocations',
+    'commonly used with': 'commonlyUsedWith',
     'example': 'example',
     'examples': 'example'
   };
 
-  const result = { phrase:'', meaning:'', example:'', collocations:[] };
+  const result = { phrase:'', meaning:'', example:'', collocations:[], commonlyUsedWith:[] };
   let section = null; // null (phrase not yet found) | 'ignore' | one of HEADERS values
   let phraseSet = false;
 
@@ -638,6 +666,8 @@ function parsePaste(){
       result.example = result.example ? result.example + ' ' + line : line;
     } else if(section==='collocations'){
       if(result.collocations.length < 2) result.collocations.push(line);
+    } else if(section==='commonlyUsedWith'){
+      if(result.commonlyUsedWith.length < 2) result.commonlyUsedWith.push(line);
     }
     // section === 'ignore' or unrecognized: line is dropped, per spec.
   }
@@ -651,6 +681,8 @@ function parsePaste(){
   document.getElementById('fMeaning').value = result.meaning;
   document.getElementById('fCollocation1').value = result.collocations[0] || '';
   document.getElementById('fCollocation2').value = result.collocations[1] || '';
+  document.getElementById('fCommonlyUsedWith1').value = result.commonlyUsedWith[0] || '';
+  document.getElementById('fCommonlyUsedWith2').value = result.commonlyUsedWith[1] || '';
   document.getElementById('fExample').value = result.example;
 
   closePasteBox();
@@ -682,6 +714,8 @@ function editEntry(id){
   document.getElementById('fMeaning').value = e.meaning || '';
   document.getElementById('fCollocation1').value = e.collocation1 || '';
   document.getElementById('fCollocation2').value = e.collocation2 || '';
+  document.getElementById('fCommonlyUsedWith1').value = e.commonlyUsedWith1 || '';
+  document.getElementById('fCommonlyUsedWith2').value = e.commonlyUsedWith2 || '';
   document.getElementById('fExample').value = e.example || '';
   document.getElementById('formTitle').textContent = 'Edit entry';
   document.getElementById('saveBtn').textContent = 'Update phrase';
@@ -695,6 +729,8 @@ function clearForm(){
   document.getElementById('fMeaning').value='';
   document.getElementById('fCollocation1').value='';
   document.getElementById('fCollocation2').value='';
+  document.getElementById('fCommonlyUsedWith1').value='';
+  document.getElementById('fCommonlyUsedWith2').value='';
   document.getElementById('fExample').value='';
   document.getElementById('formTitle').textContent = 'New entry';
   document.getElementById('saveBtn').textContent = 'Save phrase';
@@ -711,6 +747,8 @@ function saveEntry(){
     const meaning = document.getElementById('fMeaning').value.trim();
     const collocation1 = document.getElementById('fCollocation1').value.trim();
     const collocation2 = document.getElementById('fCollocation2').value.trim();
+    const commonlyUsedWith1 = document.getElementById('fCommonlyUsedWith1').value.trim();
+    const commonlyUsedWith2 = document.getElementById('fCommonlyUsedWith2').value.trim();
 
     if(editingId){
       // Update existing entry in place — original learning date and day
@@ -721,6 +759,8 @@ function saveEntry(){
         e.meaning = meaning;
         e.collocation1 = collocation1;
         e.collocation2 = collocation2;
+        e.commonlyUsedWith1 = commonlyUsedWith1;
+        e.commonlyUsedWith2 = commonlyUsedWith2;
         e.example = example;
       }
     } else {
@@ -731,6 +771,8 @@ function saveEntry(){
         meaning,
         collocation1,
         collocation2,
+        commonlyUsedWith1,
+        commonlyUsedWith2,
         example,
         date,
         day: weekdayFromDate(date)
