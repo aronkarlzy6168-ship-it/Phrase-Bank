@@ -223,12 +223,26 @@
     color:var(--ink);
     margin:0 0 10px;
   }
-  .entry-collocations, .entry-commonly-used{
+  .entry-block{
     font-size:0.82rem;
     color:var(--ink-soft);
-    margin:0 0 6px;
+    margin:0 0 8px;
   }
-  .entry-collocations strong, .entry-commonly-used strong{
+  .entry-block strong{
+    display:block;
+    color:var(--ink);
+    font-weight:600;
+    margin-bottom:3px;
+  }
+  .entry-bullet-item{
+    margin-bottom:2px;
+  }
+  .entry-flexibility{
+    font-size:0.82rem;
+    color:var(--ink-soft);
+    margin:0 0 8px;
+  }
+  .entry-flexibility strong{
     color:var(--ink);
     font-weight:600;
   }
@@ -299,22 +313,27 @@
   </div>
 
   <div class="paste-box" id="pasteBox">
-    <label>Paste a formatted entry (word, then Meaning: / Collocations: / Commonly used with: / Example:)</label>
+    <label>Paste a formatted entry (word, then Meaning: / Example: / Collocations: / Flexibility: / Common Situations:)</label>
     <textarea id="pasteInput" placeholder="pervasive
 
 Meaning:
 Present or spreading widely throughout something...
 
+Example:
+Stress is a pervasive problem in modern workplaces.
+
 Collocations:
 pervasive problem
 pervasive influence
+deeply pervasive
 
-Commonly used with:
-increasingly
-deeply
+Flexibility:
+⭐⭐⭐⭐☆ Flexible
 
-Example:
-Stress is a pervasive problem in modern workplaces."></textarea>
+Common Situations:
+Describing a widespread problem
+Talking about a lasting influence
+Making a complaint about something ongoing"></textarea>
     <div class="form-buttons">
       <button class="icon-btn" onclick="closePasteBox()">Cancel</button>
       <button class="icon-btn primary" onclick="parsePaste()">Auto-fill form</button>
@@ -332,25 +351,31 @@ Stress is a pervasive problem in modern workplaces."></textarea>
         <label>Meaning</label>
         <input type="text" id="fMeaning" placeholder="e.g. To start something">
       </div>
-      <div>
-        <label>Collocation 1</label>
-        <input type="text" id="fCollocation1" placeholder="e.g. get the ball rolling on a project">
-      </div>
-      <div>
-        <label>Collocation 2</label>
-        <input type="text" id="fCollocation2" placeholder="e.g. get the ball rolling early">
-      </div>
-      <div>
-        <label>Commonly used with 1</label>
-        <input type="text" id="fCommonlyUsedWith1" placeholder="e.g. let's">
-      </div>
-      <div>
-        <label>Commonly used with 2</label>
-        <input type="text" id="fCommonlyUsedWith2" placeholder="e.g. we should">
-      </div>
       <div class="full">
         <label>Example</label>
         <textarea id="fExample" placeholder="e.g. &quot;Let's get the ball rolling on the onboarding flow before Friday.&quot;"></textarea>
+      </div>
+      <div class="full">
+        <label>Collocations (one per line, any number)</label>
+        <textarea id="fCollocations" placeholder="get the ball rolling on a project
+get the ball rolling early"></textarea>
+      </div>
+      <div class="full">
+        <label>Flexibility</label>
+        <select id="fFlexibility">
+          <option value="">— Not set —</option>
+          <option value="⭐☆☆☆☆ Very limited">⭐☆☆☆☆ Very limited</option>
+          <option value="⭐⭐☆☆☆ Somewhat limited">⭐⭐☆☆☆ Somewhat limited</option>
+          <option value="⭐⭐⭐☆☆ Moderately flexible">⭐⭐⭐☆☆ Moderately flexible</option>
+          <option value="⭐⭐⭐⭐☆ Flexible">⭐⭐⭐⭐☆ Flexible</option>
+          <option value="⭐⭐⭐⭐⭐ Very flexible">⭐⭐⭐⭐⭐ Very flexible</option>
+        </select>
+      </div>
+      <div class="full">
+        <label>Common situations (one per line, any number)</label>
+        <textarea id="fCommonSituations" placeholder="Reassuring someone
+Giving bad news
+Correcting a misunderstanding"></textarea>
       </div>
     </div>
     <div class="form-buttons">
@@ -375,11 +400,10 @@ const seedData = [
     id: cryptoId(),
     phrase: "circle back",
     meaning: "Return to a topic later",
-    collocation1: "circle back on this",
-    collocation2: "circle back to you",
-    commonlyUsedWith1: "let's",
-    commonlyUsedWith2: "I'll",
     example: "\"Let's circle back on this once the client confirms scope.\"",
+    collocations: ["circle back on this", "circle back to you", "circle back later"],
+    flexibility: "⭐⭐⭐⭐☆ Flexible",
+    commonSituations: ["Postponing a decision", "Ending a meeting politely", "Deferring a hard question"],
     date: "2026-07-20",
     day: "Monday"
   },
@@ -387,11 +411,10 @@ const seedData = [
     id: cryptoId(),
     phrase: "on the same page",
     meaning: "Sharing the same understanding",
-    collocation1: "get on the same page",
-    collocation2: "stay on the same page",
-    commonlyUsedWith1: "make sure",
-    commonlyUsedWith2: "everyone",
     example: "\"Before we start, let's make sure we're on the same page about the timeline.\"",
+    collocations: ["get on the same page", "stay on the same page"],
+    flexibility: "⭐⭐⭐☆☆ Moderately flexible",
+    commonSituations: ["Confirming shared understanding", "Preventing a misunderstanding"],
     date: "2026-07-22",
     day: "Wednesday"
   },
@@ -399,11 +422,10 @@ const seedData = [
     id: cryptoId(),
     phrase: "a steep learning curve",
     meaning: "Something that takes real effort to learn at first",
-    collocation1: "have a steep learning curve",
-    collocation2: "steep learning curve at first",
-    commonlyUsedWith1: "at first",
-    commonlyUsedWith2: "but it clicks",
     example: "\"n8n has a steep learning curve at first, but it clicks after a week.\"",
+    collocations: ["have a steep learning curve", "steep learning curve at first"],
+    flexibility: "⭐⭐☆☆☆ Somewhat limited",
+    commonSituations: ["Describing a difficult new skill", "Reassuring someone who feels behind"],
     date: "2026-07-28",
     day: "Tuesday"
   }
@@ -419,17 +441,37 @@ function weekdayFromDate(dateStr){
 
 // Guarantees every entry has the fields render()/sort() depend on,
 // so one malformed record (e.g. missing date) can't silently break the list.
-// Also migrates entries from the old schema (context/usage/collocations/status)
-// so existing exported backups still import cleanly instead of losing data.
+// Also migrates entries from every prior schema version:
+//   - oldest: context/usage/collocations(string)/status
+//   - previous: collocation1/collocation2, commonlyUsedWith1/commonlyUsedWith2
+//   - current: collocations(array), flexibility, commonSituations(array)
+// so existing exported backups always load without losing data (requirement 7).
 function sanitizeEntry(e){
   e = e || {};
-  let collocation1 = e.collocation1 || '';
-  let collocation2 = e.collocation2 || '';
-  if(!collocation1 && !collocation2 && e.collocations){
-    const parts = String(e.collocations).split(',').map(s=>s.trim()).filter(Boolean);
-    collocation1 = parts[0] || '';
-    collocation2 = parts[1] || '';
+
+  // ---- Collocations: array, unlimited ----
+  let collocations = [];
+  if(Array.isArray(e.collocations)){
+    collocations = e.collocations.map(s=>String(s).trim()).filter(Boolean);
+  } else if(e.collocation1 || e.collocation2){
+    // migrating from the fixed-2-field version
+    collocations = [e.collocation1, e.collocation2].filter(Boolean);
+  } else if(typeof e.collocations === 'string' && e.collocations){
+    // migrating from the original comma-separated string version
+    collocations = e.collocations.split(',').map(s=>s.trim()).filter(Boolean);
   }
+
+  // ---- Common Situations: array, unlimited ----
+  // Replaces "Commonly used with" — old entries map straight across (requirement 7).
+  let commonSituations = [];
+  if(Array.isArray(e.commonSituations)){
+    commonSituations = e.commonSituations.map(s=>String(s).trim()).filter(Boolean);
+  } else if(e.commonlyUsedWith1 || e.commonlyUsedWith2){
+    commonSituations = [e.commonlyUsedWith1, e.commonlyUsedWith2].filter(Boolean);
+  }
+
+  const flexibility = e.flexibility || '';
+
   let example = e.example || '';
   if(!example && e.context){
     example = String(e.context).split('\n')[0].trim();
@@ -439,11 +481,10 @@ function sanitizeEntry(e){
     id: e.id || cryptoId(),
     phrase: e.phrase || '(untitled phrase)',
     meaning: e.meaning || '',
-    collocation1,
-    collocation2,
-    commonlyUsedWith1: e.commonlyUsedWith1 || '',
-    commonlyUsedWith2: e.commonlyUsedWith2 || '',
     example,
+    collocations,
+    flexibility,
+    commonSituations,
     date,
     day: WEEKDAYS.includes(e.day) ? e.day : weekdayFromDate(date)
   };
@@ -543,16 +584,23 @@ function exampleBlockHtml(example){
   return `<div class="entry-ctx"><strong>E.g:</strong><div class="entry-eg-item">${escapeHtml(example)}</div></div>`;
 }
 
-function collocationsBlockHtml(e){
-  const parts = [e.collocation1, e.collocation2].filter(Boolean);
-  if(parts.length===0) return '';
-  return `<p class="entry-collocations"><strong>Collocations:</strong> ${escapeHtml(parts.join(', '))}</p>`;
+function bulletListBlockHtml(label, items){
+  if(!items || items.length===0) return '';
+  const rows = items.map(item=>`<div class="entry-bullet-item">• ${escapeHtml(item)}</div>`).join('');
+  return `<div class="entry-block"><strong>${escapeHtml(label)}:</strong>${rows}</div>`;
 }
 
-function commonlyUsedWithBlockHtml(e){
-  const parts = [e.commonlyUsedWith1, e.commonlyUsedWith2].filter(Boolean);
-  if(parts.length===0) return '';
-  return `<p class="entry-commonly-used"><strong>Commonly used with:</strong> ${escapeHtml(parts.join(', '))}</p>`;
+function collocationsBlockHtml(e){
+  return bulletListBlockHtml('Collocations', e.collocations);
+}
+
+function flexibilityBlockHtml(e){
+  if(!e.flexibility) return '';
+  return `<p class="entry-flexibility"><strong>Flexibility:</strong> ${escapeHtml(e.flexibility)}</p>`;
+}
+
+function commonSituationsBlockHtml(e){
+  return bulletListBlockHtml('Common Situations', e.commonSituations);
 }
 
 function renderList(){
@@ -581,7 +629,8 @@ function renderList(){
           ${e.meaning ? `<p class="entry-meaning"><strong>Meaning:</strong> ${escapeHtml(e.meaning)}</p>` : ''}
           ${exampleBlockHtml(e.example)}
           ${collocationsBlockHtml(e)}
-          ${commonlyUsedWithBlockHtml(e)}
+          ${flexibilityBlockHtml(e)}
+          ${commonSituationsBlockHtml(e)}
         </div>
         <div class="entry-controls">
           <button class="mini-btn" onclick="editEntry('${e.id}')">Edit</button>
@@ -617,9 +666,11 @@ function closePasteBox(){
   document.getElementById('pasteBox').classList.remove('show');
 }
 
-// Parses the "word / Meaning: / Collocations: / Example:" format into the
-// add-form fields. Any unrecognized header (e.g. old "Most Common Usage:"
-// pastes) causes lines under it to be ignored, per requirement 4.
+// Parses the "word / Meaning: / Example: / Collocations: / Flexibility: /
+// Common Situations:" format into the add-form fields. Collocations and
+// Common Situations collect every bullet line until the next section —
+// no cap on count (requirement 6). Any unrecognized header causes lines
+// under it to be ignored.
 function parsePaste(){
   const raw = document.getElementById('pasteInput').value;
   const lines = raw.split('\n').map(l=>l.trim()).filter(l=>l.length>0);
@@ -630,14 +681,16 @@ function parsePaste(){
 
   const HEADERS = {
     'meaning': 'meaning',
+    'example': 'example',
+    'examples': 'example',
     'collocations': 'collocations',
     'collocation': 'collocations',
-    'commonly used with': 'commonlyUsedWith',
-    'example': 'example',
-    'examples': 'example'
+    'flexibility': 'flexibility',
+    'common situations': 'commonSituations',
+    'common situation': 'commonSituations'
   };
 
-  const result = { phrase:'', meaning:'', example:'', collocations:[], commonlyUsedWith:[] };
+  const result = { phrase:'', meaning:'', example:'', flexibility:'', collocations:[], commonSituations:[] };
   let section = null; // null (phrase not yet found) | 'ignore' | one of HEADERS values
   let phraseSet = false;
 
@@ -664,10 +717,13 @@ function parsePaste(){
       result.meaning = result.meaning ? result.meaning + ' ' + line : line;
     } else if(section==='example'){
       result.example = result.example ? result.example + ' ' + line : line;
+    } else if(section==='flexibility'){
+      // Single value — only the first line under this header is used.
+      if(!result.flexibility) result.flexibility = line;
     } else if(section==='collocations'){
-      if(result.collocations.length < 2) result.collocations.push(line);
-    } else if(section==='commonlyUsedWith'){
-      if(result.commonlyUsedWith.length < 2) result.commonlyUsedWith.push(line);
+      result.collocations.push(line);
+    } else if(section==='commonSituations'){
+      result.commonSituations.push(line);
     }
     // section === 'ignore' or unrecognized: line is dropped, per spec.
   }
@@ -679,11 +735,10 @@ function parsePaste(){
 
   document.getElementById('fPhrase').value = result.phrase;
   document.getElementById('fMeaning').value = result.meaning;
-  document.getElementById('fCollocation1').value = result.collocations[0] || '';
-  document.getElementById('fCollocation2').value = result.collocations[1] || '';
-  document.getElementById('fCommonlyUsedWith1').value = result.commonlyUsedWith[0] || '';
-  document.getElementById('fCommonlyUsedWith2').value = result.commonlyUsedWith[1] || '';
   document.getElementById('fExample').value = result.example;
+  document.getElementById('fCollocations').value = result.collocations.join('\n');
+  document.getElementById('fFlexibility').value = result.flexibility;
+  document.getElementById('fCommonSituations').value = result.commonSituations.join('\n');
 
   closePasteBox();
   toggleForm(true);
@@ -712,11 +767,10 @@ function editEntry(id){
   editingId = id;
   document.getElementById('fPhrase').value = e.phrase;
   document.getElementById('fMeaning').value = e.meaning || '';
-  document.getElementById('fCollocation1').value = e.collocation1 || '';
-  document.getElementById('fCollocation2').value = e.collocation2 || '';
-  document.getElementById('fCommonlyUsedWith1').value = e.commonlyUsedWith1 || '';
-  document.getElementById('fCommonlyUsedWith2').value = e.commonlyUsedWith2 || '';
   document.getElementById('fExample').value = e.example || '';
+  document.getElementById('fCollocations').value = (e.collocations || []).join('\n');
+  document.getElementById('fFlexibility').value = e.flexibility || '';
+  document.getElementById('fCommonSituations').value = (e.commonSituations || []).join('\n');
   document.getElementById('formTitle').textContent = 'Edit entry';
   document.getElementById('saveBtn').textContent = 'Update phrase';
   toggleForm(true);
@@ -727,13 +781,19 @@ function editEntry(id){
 function clearForm(){
   document.getElementById('fPhrase').value='';
   document.getElementById('fMeaning').value='';
-  document.getElementById('fCollocation1').value='';
-  document.getElementById('fCollocation2').value='';
-  document.getElementById('fCommonlyUsedWith1').value='';
-  document.getElementById('fCommonlyUsedWith2').value='';
   document.getElementById('fExample').value='';
+  document.getElementById('fCollocations').value='';
+  document.getElementById('fFlexibility').value='';
+  document.getElementById('fCommonSituations').value='';
   document.getElementById('formTitle').textContent = 'New entry';
   document.getElementById('saveBtn').textContent = 'Save phrase';
+}
+
+// Splits a textarea's content into a clean array — one item per
+// non-empty line — used for both Collocations and Common Situations,
+// which now support any number of entries (requirements 4 and 5).
+function linesToArray(value){
+  return value.split('\n').map(s=>s.trim()).filter(Boolean);
 }
 
 function saveEntry(){
@@ -745,10 +805,9 @@ function saveEntry(){
       return;
     }
     const meaning = document.getElementById('fMeaning').value.trim();
-    const collocation1 = document.getElementById('fCollocation1').value.trim();
-    const collocation2 = document.getElementById('fCollocation2').value.trim();
-    const commonlyUsedWith1 = document.getElementById('fCommonlyUsedWith1').value.trim();
-    const commonlyUsedWith2 = document.getElementById('fCommonlyUsedWith2').value.trim();
+    const collocations = linesToArray(document.getElementById('fCollocations').value);
+    const flexibility = document.getElementById('fFlexibility').value;
+    const commonSituations = linesToArray(document.getElementById('fCommonSituations').value);
 
     if(editingId){
       // Update existing entry in place — original learning date and day
@@ -757,11 +816,10 @@ function saveEntry(){
       if(e){
         e.phrase = phrase;
         e.meaning = meaning;
-        e.collocation1 = collocation1;
-        e.collocation2 = collocation2;
-        e.commonlyUsedWith1 = commonlyUsedWith1;
-        e.commonlyUsedWith2 = commonlyUsedWith2;
         e.example = example;
+        e.collocations = collocations;
+        e.flexibility = flexibility;
+        e.commonSituations = commonSituations;
       }
     } else {
       const date = todayStr();
@@ -769,11 +827,10 @@ function saveEntry(){
         id: cryptoId(),
         phrase,
         meaning,
-        collocation1,
-        collocation2,
-        commonlyUsedWith1,
-        commonlyUsedWith2,
         example,
+        collocations,
+        flexibility,
+        commonSituations,
         date,
         day: weekdayFromDate(date)
       });
