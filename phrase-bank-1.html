@@ -1,0 +1,897 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Phrase Bank</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0A0E14">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" href="1785727113915.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#E9EFF5;
+    --ink-soft:#8FA0B3;
+    --paper:#0A0E14;
+    --paper-raised:#121926;
+    --line:#232C3B;
+    --sage:#00C2FF;
+    --sage-soft:#0D2A3D;
+    --clay:#FF5C7A;
+    --radius:10px;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Inter',sans-serif;
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--sage-soft);}
+
+  .wrap{max-width:920px;margin:0 auto;padding:48px 24px 96px;}
+
+  header.top{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-end;
+    margin-bottom:36px;
+    border-bottom:1px solid var(--line);
+    padding-bottom:20px;
+  }
+  header.top h1{
+    font-family:'Fraunces',serif;
+    font-weight:500;
+    font-size:2rem;
+    margin:0 0 4px;
+    letter-spacing:-0.01em;
+  }
+  header.top p{
+    margin:0;
+    color:var(--ink-soft);
+    font-size:0.92rem;
+  }
+  .count-pill{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:0.78rem;
+    color:var(--ink-soft);
+    background:var(--paper-raised);
+    border:1px solid var(--line);
+    border-radius:20px;
+    padding:5px 12px;
+    white-space:nowrap;
+  }
+
+  /* ---- Toolbar ---- */
+  .toolbar{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    flex-wrap:wrap;
+    gap:12px;
+    margin-bottom:20px;
+  }
+  .filters{display:flex;flex-wrap:wrap;gap:8px;}
+  .filter-btn{
+    font-family:'Inter',sans-serif;
+    font-size:0.82rem;
+    font-weight:500;
+    padding:7px 14px;
+    border-radius:20px;
+    border:1px solid var(--line);
+    background:var(--paper-raised);
+    color:var(--ink-soft);
+    cursor:pointer;
+  }
+  .filter-btn.active{
+    background:var(--sage);
+    color:#04121C;
+    border-color:var(--sage);
+    box-shadow:0 0 12px rgba(0,194,255,0.45);
+  }
+  .actions{display:flex;flex-wrap:wrap;gap:8px;}
+  .icon-btn{
+    font-family:'Inter',sans-serif;
+    font-size:0.82rem;
+    font-weight:600;
+    padding:9px 16px;
+    border-radius:8px;
+    border:1px solid var(--line);
+    background:var(--paper-raised);
+    color:var(--ink);
+    cursor:pointer;
+  }
+  .icon-btn:hover{border-color:var(--ink);}
+  .icon-btn.primary{
+    background:var(--sage);
+    border-color:var(--sage);
+    color:#04121C;
+    box-shadow:0 0 14px rgba(0,194,255,0.45);
+  }
+  .icon-btn.primary:hover{background:#33D1FF;box-shadow:0 0 20px rgba(0,194,255,0.65);}
+  input[type=file]{display:none;}
+
+  /* ---- Paste & auto-fill ---- */
+  .paste-box{
+    background:var(--paper-raised);
+    border:1px dashed var(--sage);
+    border-radius:var(--radius);
+    padding:20px;
+    margin-bottom:28px;
+    display:none;
+  }
+  .paste-box.show{display:block;}
+  .paste-box textarea{
+    width:100%;
+    min-height:160px;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:0.82rem;
+    padding:12px;
+    border:1px solid var(--line);
+    border-radius:7px;
+    margin-top:8px;
+    resize:vertical;
+  }
+
+  /* ---- Add form ---- */
+  .add-form{
+    background:var(--paper-raised);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:20px;
+    margin-bottom:28px;
+    display:none;
+  }
+  .add-form.show{display:block;}
+  .add-form h3{
+    font-family:'Fraunces',serif;
+    font-weight:500;
+    margin:0 0 14px;
+    font-size:1.05rem;
+  }
+  .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  .form-grid .full{grid-column:1/-1;}
+  label{
+    display:block;
+    font-size:0.75rem;
+    font-weight:600;
+    text-transform:uppercase;
+    letter-spacing:0.04em;
+    color:var(--ink-soft);
+    margin-bottom:5px;
+  }
+  input[type=text],textarea,select{
+    width:100%;
+    font-family:'Inter',sans-serif;
+    font-size:0.9rem;
+    padding:9px 11px;
+    border:1px solid var(--line);
+    border-radius:7px;
+    background:var(--paper);
+    color:var(--ink);
+  }
+  textarea{resize:vertical;min-height:52px;}
+  input:focus,textarea:focus,select:focus{outline:2px solid var(--sage);outline-offset:1px;box-shadow:0 0 10px rgba(0,194,255,0.35);}
+  .form-buttons{display:flex;gap:8px;margin-top:16px;justify-content:flex-end;}
+
+  /* ---- Entries ---- */
+  .entry{
+    background:var(--paper-raised);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:18px 20px;
+    margin-bottom:12px;
+  }
+  .entry-top{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:12px;
+  }
+  .entry-phrase{
+    font-family:'Fraunces',serif;
+    font-size:1.2rem;
+    font-weight:500;
+    margin:0 0 6px;
+  }
+  .entry-ctx{
+    font-size:0.88rem;
+    color:var(--ink-soft);
+    margin:0 0 8px;
+    border-left:2px solid var(--line);
+    padding-left:10px;
+  }
+  .entry-ctx strong{
+    display:block;
+    color:var(--ink);
+    font-weight:600;
+    font-style:normal;
+    margin-bottom:3px;
+  }
+  .entry-eg-item{
+    font-style:italic;
+    margin-bottom:2px;
+  }
+  .entry-meaning{
+    font-size:0.85rem;
+    color:var(--ink);
+    margin:0 0 10px;
+  }
+  .entry-block{
+    font-size:0.82rem;
+    color:var(--ink-soft);
+    margin:0 0 8px;
+  }
+  .entry-block strong{
+    display:block;
+    color:var(--ink);
+    font-weight:600;
+    margin-bottom:3px;
+  }
+  .entry-bullet-item{
+    margin-bottom:2px;
+  }
+  .entry-flexibility{
+    font-size:0.82rem;
+    color:var(--ink-soft);
+    margin:0 0 8px;
+  }
+  .entry-flexibility strong{
+    color:var(--ink);
+    font-weight:600;
+  }
+  .entry-meta{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-top:10px;
+  }
+  .entry-date{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:0.72rem;
+    color:var(--ink-soft);
+  }
+
+  .entry-controls{display:flex;gap:6px;}
+  .mini-btn{
+    background:none;border:none;color:var(--ink-soft);
+    font-size:0.75rem;cursor:pointer;padding:2px 6px;
+  }
+  .mini-btn:hover{color:var(--clay);}
+
+  .empty-state{
+    text-align:center;
+    padding:60px 20px;
+    color:var(--ink-soft);
+  }
+  .empty-state h3{
+    font-family:'Fraunces',serif;
+    font-weight:500;
+    color:var(--ink);
+    margin-bottom:6px;
+  }
+
+  @media (max-width:600px){
+    .form-grid{grid-template-columns:1fr;}
+    header.top{flex-direction:column;align-items:flex-start;gap:8px;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <div>
+      <h1>Phrase Bank</h1>
+      <p>Natural expressions collected in the wild — not memorized, acquired.</p>
+    </div>
+    <div class="count-pill" id="countPill">0 phrases</div>
+  </header>
+
+  <div class="toolbar">
+    <div class="filters" id="filters">
+      <button class="filter-btn" data-status="Monday">Monday</button>
+      <button class="filter-btn" data-status="Tuesday">Tuesday</button>
+      <button class="filter-btn" data-status="Wednesday">Wednesday</button>
+      <button class="filter-btn" data-status="Thursday">Thursday</button>
+      <button class="filter-btn" data-status="Friday">Friday</button>
+      <button class="filter-btn" data-status="LastWeek">Last Week</button>
+    </div>
+    <div class="actions">
+      <button class="icon-btn" onclick="document.getElementById('importFile').click()">Import</button>
+      <input type="file" id="importFile" accept="application/json">
+      <button class="icon-btn" onclick="exportData()">Export</button>
+      <button class="icon-btn" onclick="openPasteBox()">Paste & auto-fill</button>
+      <button class="icon-btn primary" onclick="toggleForm()">+ Add phrase</button>
+    </div>
+  </div>
+
+  <div class="paste-box" id="pasteBox">
+    <label>Paste a formatted entry (word, then Meaning: / Example: / Collocations: / Flexibility: / Common Situations:)</label>
+    <textarea id="pasteInput" placeholder="pervasive
+
+Meaning:
+Present or spreading widely throughout something...
+
+Example:
+Stress is a pervasive problem in modern workplaces.
+
+Collocations:
+pervasive problem
+pervasive influence
+deeply pervasive
+
+Flexibility:
+⭐⭐⭐⭐☆ Flexible
+
+Common Situations:
+Describing a widespread problem
+Talking about a lasting influence
+Making a complaint about something ongoing"></textarea>
+    <div class="form-buttons">
+      <button class="icon-btn" onclick="closePasteBox()">Cancel</button>
+      <button class="icon-btn primary" onclick="parsePaste()">Auto-fill form</button>
+    </div>
+  </div>
+
+  <div class="add-form" id="addForm">
+    <h3 id="formTitle">New entry</h3>
+    <div class="form-grid">
+      <div class="full">
+        <label>Word / phrase</label>
+        <input type="text" id="fPhrase" placeholder="e.g. get the ball rolling">
+      </div>
+      <div class="full">
+        <label>Meaning</label>
+        <input type="text" id="fMeaning" placeholder="e.g. To start something">
+      </div>
+      <div class="full">
+        <label>Example</label>
+        <textarea id="fExample" placeholder="e.g. &quot;Let's get the ball rolling on the onboarding flow before Friday.&quot;"></textarea>
+      </div>
+      <div class="full">
+        <label>Collocations (one per line, any number)</label>
+        <textarea id="fCollocations" placeholder="get the ball rolling on a project
+get the ball rolling early"></textarea>
+      </div>
+      <div class="full">
+        <label>Flexibility</label>
+        <select id="fFlexibility">
+          <option value="">— Not set —</option>
+          <option value="⭐☆☆☆☆ Very limited">⭐☆☆☆☆ Very limited</option>
+          <option value="⭐⭐☆☆☆ Somewhat limited">⭐⭐☆☆☆ Somewhat limited</option>
+          <option value="⭐⭐⭐☆☆ Moderately flexible">⭐⭐⭐☆☆ Moderately flexible</option>
+          <option value="⭐⭐⭐⭐☆ Flexible">⭐⭐⭐⭐☆ Flexible</option>
+          <option value="⭐⭐⭐⭐⭐ Very flexible">⭐⭐⭐⭐⭐ Very flexible</option>
+        </select>
+      </div>
+      <div class="full">
+        <label>Common situations (one per line, any number)</label>
+        <textarea id="fCommonSituations" placeholder="Reassuring someone
+Giving bad news
+Correcting a misunderstanding"></textarea>
+      </div>
+    </div>
+    <div class="form-buttons">
+      <button class="icon-btn" onclick="toggleForm()">Cancel</button>
+      <button class="icon-btn primary" id="saveBtn" onclick="saveEntry()">Save phrase</button>
+    </div>
+  </div>
+
+  <div id="entryList"></div>
+  <div class="empty-state" id="emptyState" style="display:none;">
+    <h3>No phrases yet</h3>
+    <p>Add the next natural expression you notice — a headline, a Slack message, a line from a video.</p>
+  </div>
+
+</div>
+
+<script>
+const STORAGE_KEY = 'phraseBankData';
+
+const seedData = [
+  {
+    id: cryptoId(),
+    phrase: "circle back",
+    meaning: "Return to a topic later",
+    example: "\"Let's circle back on this once the client confirms scope.\"",
+    collocations: ["circle back on this", "circle back to you", "circle back later"],
+    flexibility: "⭐⭐⭐⭐☆ Flexible",
+    commonSituations: ["Postponing a decision", "Ending a meeting politely", "Deferring a hard question"],
+    date: "2026-07-20",
+    day: "Monday"
+  },
+  {
+    id: cryptoId(),
+    phrase: "on the same page",
+    meaning: "Sharing the same understanding",
+    example: "\"Before we start, let's make sure we're on the same page about the timeline.\"",
+    collocations: ["get on the same page", "stay on the same page"],
+    flexibility: "⭐⭐⭐☆☆ Moderately flexible",
+    commonSituations: ["Confirming shared understanding", "Preventing a misunderstanding"],
+    date: "2026-07-22",
+    day: "Wednesday"
+  },
+  {
+    id: cryptoId(),
+    phrase: "a steep learning curve",
+    meaning: "Something that takes real effort to learn at first",
+    example: "\"n8n has a steep learning curve at first, but it clicks after a week.\"",
+    collocations: ["have a steep learning curve", "steep learning curve at first"],
+    flexibility: "⭐⭐☆☆☆ Somewhat limited",
+    commonSituations: ["Describing a difficult new skill", "Reassuring someone who feels behind"],
+    date: "2026-07-28",
+    day: "Tuesday"
+  }
+];
+
+const WEEKDAYS = ['Monday','Tuesday','Wednesday','Thursday','Friday'];
+const ALL_DAY_NAMES = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+
+function weekdayFromDate(dateStr){
+  const d = new Date((dateStr||todayStr())+'T12:00:00');
+  return ALL_DAY_NAMES[d.getDay()];
+}
+
+// Guarantees every entry has the fields render()/sort() depend on,
+// so one malformed record (e.g. missing date) can't silently break the list.
+// Also migrates entries from every prior schema version:
+//   - oldest: context/usage/collocations(string)/status
+//   - previous: collocation1/collocation2, commonlyUsedWith1/commonlyUsedWith2
+//   - current: collocations(array), flexibility, commonSituations(array)
+// so existing exported backups always load without losing data (requirement 7).
+function sanitizeEntry(e){
+  e = e || {};
+
+  // ---- Collocations: array, unlimited ----
+  let collocations = [];
+  if(Array.isArray(e.collocations)){
+    collocations = e.collocations.map(s=>String(s).trim()).filter(Boolean);
+  } else if(e.collocation1 || e.collocation2){
+    // migrating from the fixed-2-field version
+    collocations = [e.collocation1, e.collocation2].filter(Boolean);
+  } else if(typeof e.collocations === 'string' && e.collocations){
+    // migrating from the original comma-separated string version
+    collocations = e.collocations.split(',').map(s=>s.trim()).filter(Boolean);
+  }
+
+  // ---- Common Situations: array, unlimited ----
+  // Replaces "Commonly used with" — old entries map straight across (requirement 7).
+  let commonSituations = [];
+  if(Array.isArray(e.commonSituations)){
+    commonSituations = e.commonSituations.map(s=>String(s).trim()).filter(Boolean);
+  } else if(e.commonlyUsedWith1 || e.commonlyUsedWith2){
+    commonSituations = [e.commonlyUsedWith1, e.commonlyUsedWith2].filter(Boolean);
+  }
+
+  const flexibility = e.flexibility || '';
+
+  let example = e.example || '';
+  if(!example && e.context){
+    example = String(e.context).split('\n')[0].trim();
+  }
+  const date = e.date || todayStr();
+  return {
+    id: e.id || cryptoId(),
+    phrase: e.phrase || '(untitled phrase)',
+    meaning: e.meaning || '',
+    example,
+    collocations,
+    flexibility,
+    commonSituations,
+    date,
+    day: WEEKDAYS.includes(e.day) ? e.day : weekdayFromDate(date)
+  };
+}
+
+let data = loadData();
+
+function loadData(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(raw){
+      const parsed = JSON.parse(raw);
+      if(Array.isArray(parsed)) return parsed.map(sanitizeEntry);
+    }
+  }catch(err){
+    console.warn('localStorage unavailable or corrupted, falling back to in-memory seed data.');
+  }
+  return seedData;
+}
+
+function persist(){
+  try{
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  }catch(err){
+    console.warn('Could not save to localStorage.');
+  }
+}
+
+function cryptoId(){return 'p'+Math.random().toString(36).slice(2,10);}
+
+function todayStr(){
+  const d = new Date();
+  return d.toISOString().slice(0,10);
+}
+
+function fmtDate(iso){
+  const d = new Date(iso+'T00:00:00');
+  return d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+}
+
+// ---- Week-window logic (requirement 1) ----
+// Rather than storing an explicit "last rollover" flag, tab membership is
+// computed live from each entry's date every time the app renders. The
+// moment a new Monday's date arrives, last week's Mon–Fri entries fall
+// outside this window automatically and reappear under Last Week — no
+// migration step to run, and nothing to break if the app isn't opened
+// for several weeks.
+function getCurrentMonday(){
+  const now = new Date();
+  now.setHours(0,0,0,0);
+  const day = now.getDay(); // 0=Sun..6=Sat
+  const diffToMonday = day === 0 ? -6 : 1 - day;
+  now.setDate(now.getDate() + diffToMonday);
+  return now;
+}
+
+function isInCurrentWeekWindow(dateStr){
+  if(!dateStr) return false;
+  const d = new Date(dateStr+'T12:00:00');
+  const monday = getCurrentMonday();
+  const friday = new Date(monday);
+  friday.setDate(monday.getDate()+4);
+  friday.setHours(23,59,59,999);
+  return d >= monday && d <= friday;
+}
+
+// Which tab an entry currently belongs to. A Mon–Fri entry stays on its
+// own weekday tab only while its date falls inside the CURRENT week's
+// Mon–Fri window; once that window passes, it's Last Week — regardless
+// of which day it was originally learned on.
+function entryTab(e){
+  if(WEEKDAYS.includes(e.day) && isInCurrentWeekWindow(e.date)) return e.day;
+  return 'LastWeek';
+}
+
+function getDefaultTab(){
+  const todayName = ALL_DAY_NAMES[new Date().getDay()];
+  return WEEKDAYS.includes(todayName) ? todayName : 'LastWeek';
+}
+
+let activeFilter = getDefaultTab();
+let editingId = null;
+
+function render(){
+  document.querySelectorAll('.filter-btn').forEach(b=>{
+    b.classList.toggle('active', b.dataset.status===activeFilter);
+  });
+  renderList();
+  document.getElementById('countPill').textContent =
+    data.length + (data.length===1 ? ' phrase' : ' phrases');
+}
+
+// Renders the example sentence as a labeled block, same visual style
+// as before (kept for consistency), now always exactly one item.
+function exampleBlockHtml(example){
+  if(!example) return '';
+  return `<div class="entry-ctx"><strong>E.g:</strong><div class="entry-eg-item">${escapeHtml(example)}</div></div>`;
+}
+
+function bulletListBlockHtml(label, items){
+  if(!items || items.length===0) return '';
+  const rows = items.map(item=>`<div class="entry-bullet-item">• ${escapeHtml(item)}</div>`).join('');
+  return `<div class="entry-block"><strong>${escapeHtml(label)}:</strong>${rows}</div>`;
+}
+
+function collocationsBlockHtml(e){
+  return bulletListBlockHtml('Collocations', e.collocations);
+}
+
+function flexibilityBlockHtml(e){
+  if(!e.flexibility) return '';
+  return `<p class="entry-flexibility"><strong>Flexibility:</strong> ${escapeHtml(e.flexibility)}</p>`;
+}
+
+function commonSituationsBlockHtml(e){
+  return bulletListBlockHtml('Common Situations', e.commonSituations);
+}
+
+function renderList(){
+  const list = document.getElementById('entryList');
+  const empty = document.getElementById('emptyState');
+  let filtered = data.filter(e=>entryTab(e)===activeFilter);
+  filtered = [...filtered].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+
+  if(data.length===0){
+    list.innerHTML='';
+    empty.style.display='block';
+    return;
+  }
+  empty.style.display='none';
+
+  if(filtered.length===0){
+    list.innerHTML = '<div class="empty-state"><h3>Nothing here yet</h3><p>No phrases are tagged for this tab.</p></div>';
+    return;
+  }
+
+  list.innerHTML = filtered.map(e=>`
+    <div class="entry">
+      <div class="entry-top">
+        <div>
+          <p class="entry-phrase">${escapeHtml(e.phrase)}</p>
+          ${e.meaning ? `<p class="entry-meaning"><strong>Meaning:</strong> ${escapeHtml(e.meaning)}</p>` : ''}
+          ${exampleBlockHtml(e.example)}
+          ${collocationsBlockHtml(e)}
+          ${flexibilityBlockHtml(e)}
+          ${commonSituationsBlockHtml(e)}
+        </div>
+        <div class="entry-controls">
+          <button class="mini-btn" onclick="editEntry('${e.id}')">Edit</button>
+          <button class="mini-btn" onclick="deleteEntry('${e.id}')">Delete</button>
+        </div>
+      </div>
+      <div class="entry-meta">
+        <div class="entry-date">${fmtDate(e.date)} &middot; ${e.day}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function deleteEntry(id){
+  data = data.filter(e=>e.id!==id);
+  persist();
+  render();
+}
+
+function escapeHtml(str){
+  const div = document.createElement('div');
+  div.textContent = str || '';
+  return div.innerHTML;
+}
+
+function openPasteBox(){
+  document.getElementById('pasteBox').classList.add('show');
+  document.getElementById('pasteInput').value = '';
+  document.getElementById('pasteInput').focus();
+}
+
+function closePasteBox(){
+  document.getElementById('pasteBox').classList.remove('show');
+}
+
+// Parses the "word / Meaning: / Example: / Collocations: / Flexibility: /
+// Common Situations:" format into the add-form fields. Collocations and
+// Common Situations collect every bullet line until the next section —
+// no cap on count (requirement 6). Any unrecognized header causes lines
+// under it to be ignored.
+function parsePaste(){
+  const raw = document.getElementById('pasteInput').value;
+  const lines = raw.split('\n').map(l=>l.trim()).filter(l=>l.length>0);
+  if(lines.length===0){
+    alert('Paste an entry first.');
+    return;
+  }
+
+  const HEADERS = {
+    'meaning': 'meaning',
+    'example': 'example',
+    'examples': 'example',
+    'collocations': 'collocations',
+    'collocation': 'collocations',
+    'flexibility': 'flexibility',
+    'common situations': 'commonSituations',
+    'common situation': 'commonSituations'
+  };
+
+  const result = { phrase:'', meaning:'', example:'', flexibility:'', collocations:[], commonSituations:[] };
+  let section = null; // null (phrase not yet found) | 'ignore' | one of HEADERS values
+  let phraseSet = false;
+
+  for(const line of lines){
+    const headerKey = line.replace(/:$/,'').toLowerCase().trim();
+    if(Object.prototype.hasOwnProperty.call(HEADERS, headerKey)){
+      section = HEADERS[headerKey];
+      continue;
+    }
+    // Any other header-like line (ends with a colon) is an unrecognized
+    // section — switch to 'ignore' so its content doesn't leak into
+    // whatever section came before it.
+    if(phraseSet && /:$/.test(line)){
+      section = 'ignore';
+      continue;
+    }
+    if(!phraseSet && section===null){
+      result.phrase = line;
+      phraseSet = true;
+      section = 'ignore';
+      continue;
+    }
+    if(section==='meaning'){
+      result.meaning = result.meaning ? result.meaning + ' ' + line : line;
+    } else if(section==='example'){
+      result.example = result.example ? result.example + ' ' + line : line;
+    } else if(section==='flexibility'){
+      // Single value — only the first line under this header is used.
+      if(!result.flexibility) result.flexibility = line;
+    } else if(section==='collocations'){
+      result.collocations.push(line);
+    } else if(section==='commonSituations'){
+      result.commonSituations.push(line);
+    }
+    // section === 'ignore' or unrecognized: line is dropped, per spec.
+  }
+
+  if(!result.phrase){
+    alert('Could not find the word or phrase — make sure it\'s the first line, before any "Meaning:" section.');
+    return;
+  }
+
+  document.getElementById('fPhrase').value = result.phrase;
+  document.getElementById('fMeaning').value = result.meaning;
+  document.getElementById('fExample').value = result.example;
+  document.getElementById('fCollocations').value = result.collocations.join('\n');
+  document.getElementById('fFlexibility').value = result.flexibility;
+  document.getElementById('fCommonSituations').value = result.commonSituations.join('\n');
+
+  closePasteBox();
+  toggleForm(true);
+}
+
+function toggleForm(forceOpen){
+  const form = document.getElementById('addForm');
+  if(forceOpen === true){
+    form.classList.add('show');
+  } else if(forceOpen === false){
+    form.classList.remove('show');
+  } else {
+    form.classList.toggle('show');
+  }
+  if(form.classList.contains('show')){
+    document.getElementById('fPhrase').focus();
+  } else {
+    editingId = null;
+    clearForm();
+  }
+}
+
+function editEntry(id){
+  const e = data.find(x=>x.id===id);
+  if(!e) return;
+  editingId = id;
+  document.getElementById('fPhrase').value = e.phrase;
+  document.getElementById('fMeaning').value = e.meaning || '';
+  document.getElementById('fExample').value = e.example || '';
+  document.getElementById('fCollocations').value = (e.collocations || []).join('\n');
+  document.getElementById('fFlexibility').value = e.flexibility || '';
+  document.getElementById('fCommonSituations').value = (e.commonSituations || []).join('\n');
+  document.getElementById('formTitle').textContent = 'Edit entry';
+  document.getElementById('saveBtn').textContent = 'Update phrase';
+  toggleForm(true);
+  const formEl = document.getElementById('addForm');
+  if(formEl.scrollIntoView) formEl.scrollIntoView({behavior:'smooth', block:'center'});
+}
+
+function clearForm(){
+  document.getElementById('fPhrase').value='';
+  document.getElementById('fMeaning').value='';
+  document.getElementById('fExample').value='';
+  document.getElementById('fCollocations').value='';
+  document.getElementById('fFlexibility').value='';
+  document.getElementById('fCommonSituations').value='';
+  document.getElementById('formTitle').textContent = 'New entry';
+  document.getElementById('saveBtn').textContent = 'Save phrase';
+}
+
+// Splits a textarea's content into a clean array — one item per
+// non-empty line — used for both Collocations and Common Situations,
+// which now support any number of entries (requirements 4 and 5).
+function linesToArray(value){
+  return value.split('\n').map(s=>s.trim()).filter(Boolean);
+}
+
+function saveEntry(){
+  try{
+    const phrase = document.getElementById('fPhrase').value.trim();
+    const example = document.getElementById('fExample').value.trim();
+    if(!phrase || !example){
+      alert('Add both the word/phrase and an example — that context is the whole point of this tool.');
+      return;
+    }
+    const meaning = document.getElementById('fMeaning').value.trim();
+    const collocations = linesToArray(document.getElementById('fCollocations').value);
+    const flexibility = document.getElementById('fFlexibility').value;
+    const commonSituations = linesToArray(document.getElementById('fCommonSituations').value);
+
+    if(editingId){
+      // Update existing entry in place — original learning date and day
+      // are preserved (requirement 1: "permanently remember" the day).
+      const e = data.find(x=>x.id===editingId);
+      if(e){
+        e.phrase = phrase;
+        e.meaning = meaning;
+        e.example = example;
+        e.collocations = collocations;
+        e.flexibility = flexibility;
+        e.commonSituations = commonSituations;
+      }
+    } else {
+      const date = todayStr();
+      data.push({
+        id: cryptoId(),
+        phrase,
+        meaning,
+        example,
+        collocations,
+        flexibility,
+        commonSituations,
+        date,
+        day: weekdayFromDate(date)
+      });
+    }
+    persist();
+    editingId = null;
+    clearForm();
+    toggleForm();
+    render();
+  }catch(err){
+    console.error(err);
+    alert('Could not save the phrase — something went wrong. Your entry was not lost from the form.');
+  }
+}
+
+document.getElementById('filters').addEventListener('click', (ev)=>{
+  const btn = ev.target.closest('.filter-btn');
+  if(!btn) return;
+  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  activeFilter = btn.dataset.status;
+  renderList();
+});
+
+function exportData(){
+  const blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'phrase-bank-'+todayStr()+'.json';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+document.getElementById('importFile').addEventListener('change', (ev)=>{
+  const file = ev.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try{
+      const imported = JSON.parse(reader.result);
+      if(Array.isArray(imported)){
+        data = imported.map(sanitizeEntry);
+        persist();
+        render();
+      }
+    }catch(err){
+      alert('Could not read that file — make sure it\'s a JSON export from this Phrase Bank.');
+    }
+  };
+  reader.readAsText(file);
+  ev.target.value = '';
+});
+
+render();
+
+if('serviceWorker' in navigator){
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('service-worker.js').catch(()=>{});
+  });
+}
+</script>
+</body>
+</html>
