@@ -37,6 +37,21 @@
 
   .wrap{max-width:920px;margin:0 auto;padding:48px 24px 96px;}
 
+  .persist-warning{
+    background:var(--sage-soft);
+    border:1px solid var(--clay);
+    border-radius:var(--radius);
+    padding:14px 16px;
+    margin-bottom:20px;
+    font-size:0.85rem;
+    display:flex;
+    flex-wrap:wrap;
+    align-items:center;
+    gap:10px;
+  }
+  .persist-warning strong{color:var(--clay);display:block;width:100%;}
+  .persist-warning span{color:var(--ink-soft);flex:1;}
+
   header.top{
     display:flex;
     justify-content:space-between;
@@ -137,6 +152,47 @@
     border-radius:7px;
     margin-top:8px;
     resize:vertical;
+  }
+
+  /* ---- Review (active recall) ---- */
+  .review-cta{margin-bottom:20px;}
+  .review-cta-btn{width:100%;font-size:0.92rem;padding:14px 16px;}
+  .review-cta-empty{
+    font-size:0.85rem;
+    color:var(--ink-soft);
+    padding:12px 16px;
+    background:var(--paper-raised);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+  }
+  .review-panel{
+    background:var(--paper-raised);
+    border:1px solid var(--sage);
+    border-radius:var(--radius);
+    padding:22px;
+    margin-bottom:28px;
+    box-shadow:0 0 16px rgba(0,194,255,0.2);
+  }
+  .review-progress{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:0.75rem;
+    color:var(--ink-soft);
+    margin-bottom:10px;
+  }
+  .review-clue{
+    font-family:'Fraunces',serif;
+    font-size:1.1rem;
+    line-height:1.5;
+    margin:0 0 18px;
+  }
+  .review-panel input[type=text]{margin-bottom:14px;}
+  .review-hint{font-size:0.85rem;margin:0 0 12px;}
+  .review-hint.correct{color:var(--sage);}
+  .review-hint.incorrect{color:var(--clay);}
+  .review-panel h3{
+    font-family:'Fraunces',serif;
+    font-weight:500;
+    margin:0 0 8px;
   }
 
   /* ---- Add form ---- */
@@ -286,6 +342,13 @@
 <body>
 <div class="wrap">
 
+  <div class="persist-warning" id="persistWarning" style="display:none;">
+    <strong>Your data may not be saving reliably right now.</strong>
+    <span>Export a backup now, just in case.</span>
+    <button class="icon-btn primary" onclick="exportData()">Export backup</button>
+  </div>
+
+
   <header class="top">
     <div>
       <h1>Phrase Bank</h1>
@@ -293,6 +356,34 @@
     </div>
     <div class="count-pill" id="countPill">0 phrases</div>
   </header>
+
+  <div class="review-cta" id="reviewCta"></div>
+
+  <div class="review-panel" id="reviewPanel" style="display:none;">
+    <div id="reviewAnswerStage">
+      <div class="review-progress" id="reviewProgress"></div>
+      <p class="review-clue" id="reviewClue"></p>
+      <input type="text" id="reviewAnswerInput" placeholder="Type the word or phrase..." autocomplete="off">
+      <div class="form-buttons">
+        <button class="icon-btn" onclick="closeReview()">Exit review</button>
+        <button class="icon-btn primary" onclick="submitReviewAnswer()">Submit</button>
+      </div>
+    </div>
+    <div id="reviewRevealStage" style="display:none;">
+      <div id="reviewRevealContent"></div>
+      <div class="form-buttons">
+        <button class="icon-btn" onclick="gradeCurrentReview(false)">✕ Missed it</button>
+        <button class="icon-btn primary" onclick="gradeCurrentReview(true)">✓ Got it</button>
+      </div>
+    </div>
+    <div id="reviewCompleteStage" style="display:none;">
+      <h3>Review complete</h3>
+      <p id="reviewSummary"></p>
+      <div class="form-buttons">
+        <button class="icon-btn primary" onclick="closeReview()">Done</button>
+      </div>
+    </div>
+  </div>
 
   <div class="toolbar">
     <div class="filters" id="filters">
@@ -477,6 +568,26 @@ function sanitizeEntry(e){
     example = String(e.context).split('\n')[0].trim();
   }
   const date = e.date || todayStr();
+
+  // ---- Spaced-repetition state ----
+  // Backfilled for any entry that doesn't already have it — this is what
+  // makes previously-saved vocabulary automatically become review-eligible
+  // the moment this feature ships: items from a prior day are due right
+  // away; items added today are scheduled for the day after they were
+  // learned, matching "learn Monday, review Tuesday."
+  let srs = (e.srs && typeof e.srs === 'object') ? e.srs : null;
+  if(!srs){
+    srs = {
+      intervalDays: 1,
+      easeFactor: 2.5,
+      nextReviewDate: date < todayStr() ? todayStr() : addDays(date, 1),
+      lastReviewedDate: null,
+      reviewCount: 0,
+      correctCount: 0,
+      history: []
+    };
+  }
+
   return {
     id: e.id || cryptoId(),
     phrase: e.phrase || '(untitled phrase)',
@@ -486,7 +597,8 @@ function sanitizeEntry(e){
     flexibility,
     commonSituations,
     date,
-    day: WEEKDAYS.includes(e.day) ? e.day : weekdayFromDate(date)
+    day: WEEKDAYS.includes(e.day) ? e.day : weekdayFromDate(date),
+    srs
   };
 }
 
@@ -502,14 +614,98 @@ function loadData(){
   }catch(err){
     console.warn('localStorage unavailable or corrupted, falling back to in-memory seed data.');
   }
-  return seedData;
+  return seedData.map(sanitizeEntry);
 }
 
 function persist(){
+  let localOk = false;
   try{
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    const json = JSON.stringify(data);
+    localStorage.setItem(STORAGE_KEY, json);
+    // Verify the write actually landed instead of assuming success —
+    // this catches silent failures (private-browsing quota limits,
+    // storage pressure) immediately instead of discovering data loss
+    // hours or days later.
+    localOk = localStorage.getItem(STORAGE_KEY) === json;
   }catch(err){
-    console.warn('Could not save to localStorage.');
+    console.warn('Could not save to localStorage.', err);
+  }
+
+  // Redundant backup to a second, independent storage mechanism.
+  // IndexedDB has its own storage bucket separate from localStorage, so
+  // if one is corrupted, partially evicted, or hits a quota edge case,
+  // the other can recover it. Fire-and-forget — never blocks the UI.
+  // NOTE: neither of these survives the browser's own "Clear site data"
+  // action, which wipes every storage type for the origin at once —
+  // nothing client-side can protect against that specific action.
+  // Exporting a backup file remains the only defense against that case.
+  idbSave(data).catch(()=>{});
+
+  if(!localOk && !persistenceWarningShown){
+    persistenceWarningShown = true;
+    const banner = document.getElementById('persistWarning');
+    if(banner) banner.style.display = 'flex';
+  }
+}
+
+let persistenceWarningShown = false;
+
+// ---- IndexedDB redundancy layer ----
+const IDB_NAME = 'phraseBankDB';
+const IDB_STORE = 'snapshots';
+const IDB_KEY = 'latest';
+
+function idbOpen(){
+  return new Promise((resolve, reject) => {
+    if(!('indexedDB' in window)){ reject(new Error('IndexedDB not available')); return; }
+    const req = indexedDB.open(IDB_NAME, 1);
+    req.onupgradeneeded = () => { req.result.createObjectStore(IDB_STORE); };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function idbSave(entries){
+  const db = await idbOpen();
+  await new Promise((resolve, reject) => {
+    const tx = db.transaction(IDB_STORE, 'readwrite');
+    tx.objectStore(IDB_STORE).put({ entries, savedAt: Date.now() }, IDB_KEY);
+    tx.oncomplete = resolve;
+    tx.onerror = () => reject(tx.error);
+  });
+  db.close();
+}
+
+async function idbLoad(){
+  try{
+    const db = await idbOpen();
+    const result = await new Promise((resolve, reject) => {
+      const tx = db.transaction(IDB_STORE, 'readonly');
+      const req = tx.objectStore(IDB_STORE).get(IDB_KEY);
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+    db.close();
+    return result || null;
+  }catch(err){
+    return null;
+  }
+}
+
+// Runs shortly after load, in the background. If IndexedDB turns out to
+// hold more entries than what localStorage gave us at startup (e.g.
+// localStorage was partially evicted but IndexedDB survived), recover
+// automatically and re-sync both stores. Self-healing, silent when
+// there's nothing to fix.
+async function reconcileWithIndexedDB(){
+  const snapshot = await idbLoad();
+  if(!snapshot || !Array.isArray(snapshot.entries)) return;
+  const recovered = snapshot.entries.map(sanitizeEntry);
+  if(recovered.length > data.length){
+    console.warn('Recovered', recovered.length - data.length, 'entries from IndexedDB backup.');
+    data = recovered;
+    persist();
+    render();
   }
 }
 
@@ -517,7 +713,16 @@ function cryptoId(){return 'p'+Math.random().toString(36).slice(2,10);}
 
 function todayStr(){
   const d = new Date();
-  return d.toISOString().slice(0,10);
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,'0');
+  const day = String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+}
+
+function addDays(dateStr, n){
+  const d = new Date(dateStr+'T12:00:00');
+  d.setDate(d.getDate()+n);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
 
 function fmtDate(iso){
@@ -565,6 +770,167 @@ function getDefaultTab(){
   return WEEKDAYS.includes(todayName) ? todayName : 'LastWeek';
 }
 
+// ---- Active recall review system ----
+// Only vocabulary from a PREVIOUS day is ever reviewable — today's new
+// words stay in pure Learn mode (full info visible), matching:
+// "New vocabulary = normal learning mode. Previous vocabulary = review
+// mode." Also gated on the entry's own srs.nextReviewDate, so spaced
+// repetition controls exactly which previous-day items are due today,
+// rather than dumping every past word into every session.
+function getDueReviewItems(){
+  const today = todayStr();
+  return data.filter(e => e.date < today && e.srs && e.srs.nextReviewDate <= today);
+}
+
+function escapeRegex(s){
+  return String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+// Builds a retrieval clue WITHOUT ever revealing the phrase itself.
+// Prefers a cloze-style clue built from the entry's own example sentence
+// (the phrase blanked out) since that requires genuine contextual
+// retrieval rather than just recognizing a paraphrased definition —
+// closer to the "even better" tier described in the spec. Falls back to
+// a situation-based or meaning-based clue if a clean cloze can't be
+// built, and picks randomly among whichever are available so repeated
+// reviews of the same item don't always ask the exact same question.
+function generateClue(entry){
+  const candidates = [];
+
+  if(entry.example){
+    const re = new RegExp(escapeRegex(entry.phrase), 'ig');
+    if(re.test(entry.example)){
+      const blanked = entry.example.replace(re, '______');
+      candidates.push(`Fill in the blank based on this scenario: ${blanked} — what phrase from your Phrase Bank completes it?`);
+    }
+  }
+
+  if(entry.commonSituations && entry.commonSituations.length){
+    const situation = entry.commonSituations[Math.floor(Math.random()*entry.commonSituations.length)];
+    candidates.push(`You're in a situation where you're ${situation.charAt(0).toLowerCase()+situation.slice(1)}. What phrase from your Phrase Bank fits here?`);
+  }
+
+  if(entry.meaning && entry.meaning.toLowerCase().indexOf(entry.phrase.toLowerCase()) === -1){
+    candidates.push(`What's the word or phrase you learned that means: "${entry.meaning}"?`);
+  }
+
+  if(candidates.length===0){
+    return `What phrase did you learn that fits this sentence: "${entry.example}"?`;
+  }
+  return candidates[Math.floor(Math.random()*candidates.length)];
+}
+
+function normalizeForCompare(s){
+  return String(s||'').toLowerCase().trim().replace(/[^\w\s]/g,'').replace(/\s+/g,' ');
+}
+
+// Lightweight SM-2-style spaced repetition. Grading is self-reported
+// (the person marks "Got it" / "Missed it" themselves after seeing the
+// answer) rather than purely auto-graded from the typed text, since a
+// paraphrase or minor typo shouldn't count as a true miss — this
+// mirrors how Anki and similar tools handle self-assessment.
+function gradeReview(entry, correct){
+  const s = entry.srs;
+  s.reviewCount += 1;
+  if(correct){
+    s.correctCount += 1;
+    s.intervalDays = s.reviewCount<=1 ? 1 : (s.reviewCount===2 ? 3 : Math.round(s.intervalDays * s.easeFactor));
+    s.easeFactor = Math.min(3.0, s.easeFactor + 0.1);
+  } else {
+    s.intervalDays = 1;
+    s.easeFactor = Math.max(1.3, s.easeFactor - 0.2);
+  }
+  s.lastReviewedDate = todayStr();
+  s.nextReviewDate = addDays(todayStr(), s.intervalDays);
+  s.history.push({date: todayStr(), correct});
+  persist();
+}
+
+let reviewQueue = [];
+let reviewIndex = 0;
+let reviewCorrectCount = 0;
+
+function startReview(){
+  reviewQueue = getDueReviewItems();
+  if(reviewQueue.length === 0) return;
+  reviewIndex = 0;
+  reviewCorrectCount = 0;
+  document.getElementById('reviewPanel').style.display = 'block';
+  showReviewItem();
+  const panel = document.getElementById('reviewPanel');
+  if(panel.scrollIntoView) panel.scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+function showReviewItem(){
+  document.getElementById('reviewAnswerStage').style.display = 'block';
+  document.getElementById('reviewRevealStage').style.display = 'none';
+  document.getElementById('reviewCompleteStage').style.display = 'none';
+
+  const entry = reviewQueue[reviewIndex];
+  document.getElementById('reviewProgress').textContent = `Item ${reviewIndex+1} of ${reviewQueue.length}`;
+  document.getElementById('reviewClue').textContent = generateClue(entry);
+  document.getElementById('reviewAnswerInput').value = '';
+  document.getElementById('reviewAnswerInput').focus();
+}
+
+function submitReviewAnswer(){
+  const entry = reviewQueue[reviewIndex];
+  const typed = document.getElementById('reviewAnswerInput').value;
+  const looksRight = typed.trim() && normalizeForCompare(typed) === normalizeForCompare(entry.phrase);
+
+  document.getElementById('reviewAnswerStage').style.display = 'none';
+  document.getElementById('reviewRevealStage').style.display = 'block';
+
+  const hintHtml = typed.trim()
+    ? `<p class="review-hint ${looksRight?'correct':'incorrect'}">Your answer: "${escapeHtml(typed)}"${looksRight ? ' — looks right!' : ' — compare below.'}</p>`
+    : `<p class="review-hint">You left this blank — no problem, here's the answer.</p>`;
+
+  document.getElementById('reviewRevealContent').innerHTML = `
+    <p class="entry-phrase">${escapeHtml(entry.phrase)}</p>
+    ${hintHtml}
+    ${entry.meaning ? `<p class="entry-meaning"><strong>Meaning:</strong> ${escapeHtml(entry.meaning)}</p>` : ''}
+    ${exampleBlockHtml(entry.example)}
+    ${collocationsBlockHtml(entry)}
+    ${flexibilityBlockHtml(entry)}
+    ${commonSituationsBlockHtml(entry)}
+  `;
+}
+
+function gradeCurrentReview(correct){
+  const entry = reviewQueue[reviewIndex];
+  gradeReview(entry, correct);
+  if(correct) reviewCorrectCount++;
+  reviewIndex++;
+  if(reviewIndex < reviewQueue.length){
+    showReviewItem();
+  } else {
+    finishReview();
+  }
+}
+
+function finishReview(){
+  document.getElementById('reviewAnswerStage').style.display = 'none';
+  document.getElementById('reviewRevealStage').style.display = 'none';
+  document.getElementById('reviewCompleteStage').style.display = 'block';
+  document.getElementById('reviewSummary').textContent = `${reviewCorrectCount} / ${reviewQueue.length} correct.`;
+  renderReviewCta();
+}
+
+function closeReview(){
+  document.getElementById('reviewPanel').style.display = 'none';
+}
+
+function renderReviewCta(){
+  const due = getDueReviewItems();
+  const cta = document.getElementById('reviewCta');
+  if(!cta) return;
+  if(due.length === 0){
+    cta.innerHTML = `<div class="review-cta-empty">Nothing due for review right now.</div>`;
+  } else {
+    cta.innerHTML = `<button class="icon-btn primary review-cta-btn" onclick="startReview()">Start Review — ${due.length} due</button>`;
+  }
+}
+
 let activeFilter = getDefaultTab();
 let editingId = null;
 
@@ -573,6 +939,7 @@ function render(){
     b.classList.toggle('active', b.dataset.status===activeFilter);
   });
   renderList();
+  renderReviewCta();
   document.getElementById('countPill').textContent =
     data.length + (data.length===1 ? ' phrase' : ' phrases');
 }
@@ -823,8 +1190,7 @@ function saveEntry(){
       }
     } else {
       const date = todayStr();
-      data.push({
-        id: cryptoId(),
+      data.push(sanitizeEntry({
         phrase,
         meaning,
         example,
@@ -833,7 +1199,7 @@ function saveEntry(){
         commonSituations,
         date,
         day: weekdayFromDate(date)
-      });
+      }));
     }
     persist();
     editingId = null;
@@ -886,6 +1252,20 @@ document.getElementById('importFile').addEventListener('change', (ev)=>{
 });
 
 render();
+
+// Ask the browser not to evict this site's storage under storage
+// pressure. Not all browsers grant it, and not granting it isn't
+// necessarily an error — but it directly addresses one real, silent
+// cause of "my data disappeared" that isn't just a manual data clear.
+if(navigator.storage && navigator.storage.persist){
+  navigator.storage.persist().then(granted => {
+    if(!granted) console.warn('Persistent storage was not granted by the browser.');
+  }).catch(()=>{});
+}
+
+if('indexedDB' in window){
+  reconcileWithIndexedDB();
+}
 
 if('serviceWorker' in navigator){
   window.addEventListener('load', () => {
